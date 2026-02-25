@@ -63,6 +63,50 @@ Extract text from multiple PDF files.
 }
 ```
 
+### POST /extract-batch
+
+Extract text from multiple base64-encoded PDF files. Designed for Power Automate where multipart form-data is difficult.
+
+**Body (JSON):**
+
+```json
+{
+  "files": [
+    { "filename": "leidraad.pdf", "content": "<base64 encoded PDF>" },
+    { "filename": "bijlage_a.pdf", "content": "<base64 encoded PDF>" }
+  ]
+}
+```
+
+**Limits:** max 10 files per request, max 50MB per file.
+
+**Returns:** JSON
+
+```json
+{
+  "documents": [
+    {
+      "filename": "leidraad.pdf",
+      "pages": 42,
+      "total_characters": 85230,
+      "text": "volledige tekst..."
+    },
+    {
+      "filename": "bijlage_a.pdf",
+      "pages": 8,
+      "total_characters": 12450,
+      "text": "volledige tekst..."
+    }
+  ]
+}
+```
+
+Corrupt or invalid files return an error per document instead of failing the whole request:
+
+```json
+{ "filename": "corrupt.pdf", "error": "Could not open 'corrupt.pdf' as a valid PDF" }
+```
+
 ### GET /health
 
 Health check endpoint.
@@ -91,7 +135,39 @@ curl -X POST http://localhost:8000/extract-multiple \
   -H "x-api-key: test123"
 ```
 
+### Test batch extraction
+
+```bash
+curl -X POST http://localhost:8000/extract-batch \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: test123" \
+  -d '{
+    "files": [
+      { "filename": "test.pdf", "content": "'$(base64 -i test.pdf)'" }
+    ]
+  }'
+```
+
 ## Power Automate Integration
+
+### Batch extraction (HTTP action, recommended):
+
+- Method: POST
+- URI: `https://your-service/extract-batch`
+- Headers:
+  - `Content-Type`: `application/json`
+  - `x-api-key`: your API key
+- Body:
+  ```json
+  {
+    "files": [
+      {
+        "filename": "@{items('sf-each-file')?['{FilenameWithExtension}']}",
+        "content": "@{base64(body('sf-get-content'))}"
+      }
+    ]
+  }
+  ```
 
 ### Single extraction (HTTP action):
 
